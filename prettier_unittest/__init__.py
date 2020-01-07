@@ -27,34 +27,23 @@ import os
 import importlib
 import time
 import unittest
+import sys
+
+import blessings
 import pygments
 from pygments.formatters import Terminal256Formatter
 from pygments.lexers.python import Python3TracebackLexer
-from pygments.token import (
-    Keyword,
-    Name,
-    Comment,
-    String,
-    Error,
-    Number,
-    Operator,
-    Generic,
-    Literal,
-)
-import blessings
 
-SUITES_DIR = "test/suites"
+SUITES_DIR = "test/suite"
 
 terminal = blessings.Terminal()
-text_type = str
 colors = {
-    None: text_type,
     "error": terminal.bold_red,
-    "expected": terminal.blue,
-    "fail": terminal.bold_yellow,
-    "skip": text_type,
-    "success": terminal.green,
-    "title": terminal.blue,
+    "expected": terminal.bold_blue,
+    "fail": terminal.bold_red,
+    "skip": str,
+    "success": terminal.bold_green,
+    "title": terminal.bold_blue,
     "unexpected": terminal.bold_red,
 }
 
@@ -117,7 +106,7 @@ class ColorTextTestResult(unittest.TestResult):
 
     def addSuccess(self, test):
         super(ColorTextTestResult, self).addSuccess(test)
-        self.printResult(".", "ok", "success")
+        self.printResult(".", "OK", "success")
 
     def addError(self, test, err):
         super(ColorTextTestResult, self).addError(test, err)
@@ -192,28 +181,29 @@ class ColorTextTestRunner(unittest.TextTestRunner):
 
 
 def get_suites_to_run():
-    """Gets the list of all suites in the suites folder"""
+    """Gets the list of all suites in the suite folder"""
+    sys.path.insert(0, os.getcwd())  # needed when using binary
     suites = []
     for root, _, files in os.walk(SUITES_DIR):
         for filename in files:
-            if filename.endswith(".py"):
+            if not filename.startswith("_") and filename.endswith(".py"):
                 module_name = root.replace("/", ".") + "." + filename[:-3]
                 try:
                     module_file = importlib.import_module(module_name)
                     suite = module_file.suite()
                     suites.append(suite)
-                    print("Suite from " + filename + " loaded")
+                    print("Suite from " + filename + " loaded.")
                 except AttributeError:
-                    print(
+                    sys.stderr.write(
                         "The suite from "
                         + filename
-                        + " could not be added to the suites list."
+                        + " could not be added to the suites list.\n"
                     )
     return suites
 
 
 def run():
-    """Runs all the unittests in the suites folder"""
+    """Runs all the unittests in the suite folder"""
     suite = unittest.TestSuite()
     suites_to_tun = get_suites_to_run()
     for suite_to_run in suites_to_tun:
